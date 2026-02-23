@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAIGeneration } from '../hooks/useAIGeneration'
 import { buildTranscriptScriptPrompt } from '../prompts/scriptFromTranscripts'
+import { downloadScriptAsDocx } from '../utils/exportDocx'
 import { TypewriterText, Spinner, ErrorState } from './ui/common'
 
 // ─── DOWNLOAD HELPERS ───
@@ -169,6 +170,10 @@ export default function ScriptViewer({
     downloadFile(json, filename, 'application/json')
   }
 
+  const handleDownloadDocx = () => {
+    downloadScriptAsDocx(script)
+  }
+
   if (isLoading) {
     return (
       <div className="flex min-h-[500px] flex-col items-center justify-center gap-6">
@@ -201,16 +206,22 @@ export default function ScriptViewer({
         </button>
         <div className="flex gap-2">
           <button
+            onClick={handleDownloadDocx}
+            className="rounded-lg border border-forge-gold/30 px-4 py-2 text-sm text-forge-gold/70 transition hover:border-forge-gold/50 hover:text-forge-gold"
+          >
+            ↓ Word (.docx)
+          </button>
+          <button
             onClick={handleDownloadMarkdown}
             className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/40 transition hover:border-white/20 hover:text-white/60"
           >
-            ↓ Download .md
+            ↓ .md
           </button>
           <button
             onClick={handleDownloadJSON}
             className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/40 transition hover:border-white/20 hover:text-white/60"
           >
-            ↓ Download .json
+            ↓ .json
           </button>
           <button
             onClick={handleRegenerate}
@@ -525,10 +536,10 @@ export default function ScriptViewer({
             ↻ Regenerate Script
           </button>
           <button
-            onClick={handleDownloadMarkdown}
+            onClick={handleDownloadDocx}
             className="rounded-xl border border-white/15 px-6 py-3.5 text-sm text-white/50 transition hover:border-white/25"
           >
-            ↓ Download Script
+            ↓ Download Script (.docx)
           </button>
         </div>
       </div>
