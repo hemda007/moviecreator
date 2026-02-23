@@ -1,27 +1,19 @@
-import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  HeadingLevel,
-  AlignmentType,
-  BorderStyle,
-  TabStopPosition,
-  TabStopType,
-  ShadingType,
-} from 'docx'
-import { saveAs } from 'file-saver'
+/**
+ * Word document export — zero external dependencies.
+ * Generates styled HTML wrapped in Word-compatible XML namespace.
+ * Word, Google Docs, and LibreOffice all open these natively.
+ */
 
-// ─── DESIGN TOKENS ───
-const GOLD = 'E8C547'
-const CREAM = 'F5F0E8'
-const DARK = '0A0A0A'
-const MUTED = '999999'
-const INTERVIEW_BLUE = '64C8FF'
-const BROLL_GREEN = '64FF96'
-const NARRATION_AMBER = 'FFC864'
-const TITLECARD_PURPLE = 'C896FF'
-const MONTAGE_PINK = 'FF96C8'
+// ─── COLORS ───
+const GOLD = '#E8C547'
+const CREAM = '#F5F0E8'
+const DARK = '#0A0A0A'
+const MUTED = '#999999'
+const INTERVIEW_BLUE = '#64C8FF'
+const BROLL_GREEN = '#64FF96'
+const NARRATION_AMBER = '#FFC864'
+const TITLECARD_PURPLE = '#C896FF'
+const MONTAGE_PINK = '#FF96C8'
 
 const CUT_TYPE_COLORS = {
   interview: INTERVIEW_BLUE,
@@ -33,671 +25,304 @@ const CUT_TYPE_COLORS = {
   transition: MUTED,
 }
 
-// ─── HELPERS ───
-
-function heading(text, level = HeadingLevel.HEADING_1) {
-  return new Paragraph({
-    heading: level,
-    spacing: { before: 300, after: 100 },
-    children: [
-      new TextRun({
-        text,
-        bold: true,
-        color: level === HeadingLevel.HEADING_1 ? GOLD : CREAM,
-        font: 'Georgia',
-      }),
-    ],
-  })
+function esc(text) {
+  if (!text) return ''
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
-function label(text) {
-  return new Paragraph({
-    spacing: { before: 200, after: 60 },
-    children: [
-      new TextRun({
-        text: text.toUpperCase(),
-        bold: true,
-        size: 18,
-        color: GOLD,
-        font: 'Consolas',
-        characterSpacing: 80,
-      }),
-    ],
-  })
+function saveAsDoc(html, filename) {
+  const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8">
+<style>
+@page{size:A4;margin:2cm}
+body{font-family:Calibri,sans-serif;font-size:11pt;color:${CREAM};background:${DARK};line-height:1.6}
+h1{font-family:Georgia,serif;color:${GOLD};font-size:26pt;font-weight:bold;margin:20pt 0 6pt}
+h2{font-family:Georgia,serif;color:${CREAM};font-size:17pt;font-weight:bold;margin:18pt 0 6pt;border-bottom:1pt solid #333;padding-bottom:4pt}
+h3{font-family:Georgia,serif;color:${GOLD};font-size:13pt;font-weight:bold;margin:14pt 0 4pt}
+.lbl{font-family:Consolas,monospace;font-size:9pt;color:${GOLD};letter-spacing:3pt;font-weight:bold;text-transform:uppercase;margin:16pt 0 6pt}
+.meta{font-family:Consolas,monospace;font-size:9pt;color:${MUTED}}
+.scene{font-family:Consolas,monospace;font-size:11pt;color:${GOLD};font-weight:bold;text-transform:uppercase;margin:16pt 0 4pt}
+.dir{font-family:Consolas,monospace;font-size:10pt;color:${MUTED};font-style:italic;margin:4pt 0}
+.dlg{margin:6pt 0 6pt 36pt}
+.dlg .spk{font-weight:bold;color:${INTERVIEW_BLUE}}
+.nar{margin:6pt 0 6pt 24pt;border-left:3px solid ${NARRATION_AMBER};padding-left:12pt;font-style:italic;color:${NARRATION_AMBER}}
+.demo{text-align:center;background:#1A1A2E;padding:8pt;margin:8pt 0;border:1px solid rgba(100,200,255,0.2)}
+.demo .t{font-family:Consolas,monospace;font-size:10pt;color:${INTERVIEW_BLUE};font-weight:bold;text-transform:uppercase;letter-spacing:2pt}
+.demo .d{font-style:italic;color:${MUTED};font-size:10pt}
+.pill{font-family:Consolas,monospace;font-size:8pt;font-weight:bold;padding:1pt 4pt}
+.hr{border-top:1pt solid #333;margin:14pt 0}
+.box{border:1px solid rgba(232,197,71,0.2);background:rgba(232,197,71,0.03);padding:10pt;margin:8pt 0}
+.box .t{font-family:Consolas,monospace;font-size:9pt;color:${GOLD};font-weight:bold;text-transform:uppercase;letter-spacing:2pt;margin-bottom:4pt}
+.wbox{border:1px solid rgba(255,100,100,0.2);background:rgba(255,100,100,0.03);padding:10pt;margin:8pt 0}
+.wbox .t{font-family:Consolas,monospace;font-size:9pt;color:#FF6666;font-weight:bold;text-transform:uppercase;letter-spacing:2pt;margin-bottom:4pt}
+.bul{margin-left:18pt;margin-bottom:3pt}
+.cut{border-left:3px solid ${MUTED};padding-left:10pt;margin:10pt 0}
+.ct{font-family:Consolas,monospace;font-size:8pt;font-weight:bold;text-transform:uppercase;letter-spacing:1pt;padding:1pt 4pt}
+.tc{font-family:Consolas,monospace;font-size:9pt;color:${GOLD}}
+.olay{border:1px solid rgba(200,150,255,0.2);background:rgba(200,150,255,0.03);padding:6pt;margin:4pt 0}
+.olay .tx{font-family:Consolas,monospace;font-size:11pt;color:${TITLECARD_PURPLE};font-weight:bold}
+.gfx{border:1px solid rgba(100,255,150,0.2);background:rgba(100,255,150,0.03);padding:6pt;margin:4pt 0}
+.en{font-family:Consolas,monospace;font-size:9pt;color:${NARRATION_AMBER};font-style:italic}
+</style></head><body>
+${html}
+</body></html>`
+
+  const blob = new Blob([doc], { type: 'application/msword' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
-function body(text, { italic = false, color = CREAM, bold = false } = {}) {
-  return new Paragraph({
-    spacing: { after: 80 },
-    children: [
-      new TextRun({ text, italics: italic, bold, color, size: 22, font: 'Calibri' }),
-    ],
-  })
+function safeName(title) {
+  return (title || 'untitled').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')
 }
 
-function bullet(text, { color = CREAM } = {}) {
-  return new Paragraph({
-    spacing: { after: 40 },
-    indent: { left: 360 },
-    children: [
-      new TextRun({ text: '  •  ', color: GOLD, size: 20, font: 'Consolas' }),
-      new TextRun({ text, color, size: 20, font: 'Calibri' }),
-    ],
-  })
-}
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SCRIPT EXPORT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function spacer() {
-  return new Paragraph({ spacing: { before: 100, after: 100 }, children: [] })
-}
+export function downloadScriptAsDocx(script) {
+  let h = ''
 
-function divider() {
-  return new Paragraph({
-    spacing: { before: 200, after: 200 },
-    border: {
-      bottom: { style: BorderStyle.SINGLE, size: 1, color: '333333' },
-    },
-    children: [],
-  })
-}
+  // Title
+  h += `<h1 style="text-align:center">${esc(script.title)}</h1>`
+  if (script.subtitle) h += `<p style="text-align:center;font-family:Georgia;font-size:14pt;color:${MUTED};font-style:italic">${esc(script.subtitle)}</p>`
+  h += `<p style="text-align:center" class="meta">Duration: ${esc(script.total_duration_estimate)}</p>`
+  if (script.story_summary) h += `<p style="text-align:center;color:${MUTED};font-style:italic;max-width:80%;margin:8pt auto">${esc(script.story_summary)}</p>`
+  h += `<div class="hr"></div>`
 
-function tagPill(text, color = GOLD) {
-  return new TextRun({
-    text: `[${text}] `,
-    bold: true,
-    size: 18,
-    color,
-    font: 'Consolas',
-  })
-}
-
-// ─── SCRIPT TO DOCX ───
-
-export async function downloadScriptAsDocx(script) {
-  const sections = []
-
-  // Title page
-  sections.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 600, after: 100 },
-      children: [
-        new TextRun({
-          text: script.title || 'Untitled',
-          bold: true,
-          size: 56,
-          color: GOLD,
-          font: 'Georgia',
-        }),
-      ],
-    })
-  )
-  if (script.subtitle) {
-    sections.push(
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 100 },
-        children: [
-          new TextRun({
-            text: script.subtitle,
-            italics: true,
-            size: 28,
-            color: MUTED,
-            font: 'Georgia',
-          }),
-        ],
-      })
-    )
-  }
-  sections.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 60 },
-      children: [
-        new TextRun({ text: `Duration: ${script.total_duration_estimate || ''}`, size: 20, color: MUTED, font: 'Consolas' }),
-      ],
-    })
-  )
-  if (script.story_summary) {
-    sections.push(spacer())
-    sections.push(body(script.story_summary, { italic: true, color: MUTED }))
-  }
-  sections.push(divider())
-
-  // Characters
+  // Cast
   if (script.characters?.length > 0) {
-    sections.push(label('Cast'))
-    script.characters.forEach((c) => {
-      sections.push(
-        new Paragraph({
-          spacing: { before: 120, after: 40 },
-          children: [
-            new TextRun({ text: c.name, bold: true, size: 24, color: GOLD, font: 'Calibri' }),
-            new TextRun({ text: `  —  ${c.role}`, size: 20, color: MUTED, font: 'Calibri' }),
-          ],
-        })
-      )
-      if (c.arc) sections.push(body(c.arc, { italic: true, color: MUTED }))
-    })
-    sections.push(divider())
+    h += `<p class="lbl">CAST</p>`
+    for (const c of script.characters) {
+      h += `<p><b style="color:${GOLD};font-size:12pt">${esc(c.name)}</b> <span class="meta">&mdash; ${esc(c.role)}</span></p>`
+      if (c.arc) h += `<p style="color:${MUTED};font-style:italic;margin-left:18pt">${esc(c.arc)}</p>`
+    }
+    h += `<div class="hr"></div>`
   }
 
   // Chapters
-  script.chapters?.forEach((chapter) => {
-    const title =
-      chapter.chapter_number > 0
-        ? `Chapter ${chapter.chapter_number}: ${chapter.chapter_title}`
-        : chapter.chapter_title
-    sections.push(heading(title, HeadingLevel.HEADING_2))
+  for (const ch of script.chapters || []) {
+    const t = ch.chapter_number > 0 ? `Chapter ${ch.chapter_number}: ${esc(ch.chapter_title)}` : esc(ch.chapter_title)
+    h += `<h2>${t}</h2>`
+    h += `<p class="meta">~${esc(ch.duration_estimate)}</p>`
+    if (ch.purpose) h += `<p style="color:${MUTED}">${esc(ch.purpose)}</p>`
 
-    sections.push(
-      new Paragraph({
-        spacing: { after: 60 },
-        children: [
-          new TextRun({ text: `~${chapter.duration_estimate}`, size: 18, color: MUTED, font: 'Consolas' }),
-        ],
-      })
-    )
-    if (chapter.purpose) sections.push(body(chapter.purpose, { color: MUTED }))
-
-    // Music suggestion
-    if (chapter.music_suggestion) {
-      const ms = chapter.music_suggestion
-      const parts = [ms.mood, ms.tempo, ms.instruments].filter(Boolean).join('  |  ')
-      if (parts) {
-        sections.push(
-          new Paragraph({
-            spacing: { before: 80, after: 40 },
-            children: [
-              tagPill('MUSIC', MONTAGE_PINK),
-              new TextRun({ text: parts, size: 18, color: MONTAGE_PINK, font: 'Consolas' }),
-            ],
-          })
-        )
-      }
-      if (ms.reference) {
-        sections.push(body(`Ref: ${ms.reference}`, { italic: true, color: MUTED }))
-      }
+    if (ch.music_suggestion) {
+      const ms = ch.music_suggestion
+      const parts = [ms.mood, ms.tempo, ms.instruments].filter(Boolean).join(' &nbsp;|&nbsp; ')
+      if (parts) h += `<p><span class="pill" style="color:${MONTAGE_PINK}">[MUSIC]</span> <span style="color:${MONTAGE_PINK};font-family:Consolas;font-size:9pt">${esc(parts)}</span></p>`
+      if (ms.reference) h += `<p style="color:${MUTED};font-style:italic;font-size:9pt">Ref: ${esc(ms.reference)}</p>`
     }
 
-    sections.push(spacer())
-
-    // Beats
-    chapter.beats?.forEach((beat) => {
-      switch (beat.type) {
+    for (const b of ch.beats || []) {
+      switch (b.type) {
         case 'scene_heading':
-          sections.push(
-            new Paragraph({
-              spacing: { before: 200, after: 80 },
-              children: [
-                new TextRun({
-                  text: beat.content.toUpperCase(),
-                  bold: true,
-                  size: 22,
-                  color: GOLD,
-                  font: 'Consolas',
-                }),
-              ],
-            })
-          )
-          break
-
+          h += `<p class="scene">${esc(b.content)}</p>`; break
         case 'direction':
-          sections.push(
-            new Paragraph({
-              spacing: { after: 60 },
-              children: [
-                new TextRun({
-                  text: `[${beat.content}]`,
-                  italics: true,
-                  size: 20,
-                  color: MUTED,
-                  font: 'Consolas',
-                }),
-              ],
-            })
-          )
-          break
-
+          h += `<p class="dir">[${esc(b.content)}]</p>`; break
         case 'dialogue':
-          sections.push(
-            new Paragraph({
-              spacing: { before: 80, after: 80 },
-              indent: { left: 720 },
-              children: [
-                new TextRun({
-                  text: `${beat.speaker}: `,
-                  bold: true,
-                  size: 22,
-                  color: INTERVIEW_BLUE,
-                  font: 'Calibri',
-                }),
-                new TextRun({
-                  text: `"${beat.content}"`,
-                  size: 22,
-                  color: CREAM,
-                  font: 'Calibri',
-                }),
-              ],
-            })
-          )
-          break
-
+          h += `<div class="dlg"><span class="spk">${esc(b.speaker)}:</span> &ldquo;${esc(b.content)}&rdquo;</div>`; break
         case 'narration':
-          sections.push(
-            new Paragraph({
-              spacing: { before: 80, after: 80 },
-              indent: { left: 480 },
-              border: {
-                left: { style: BorderStyle.SINGLE, size: 3, color: NARRATION_AMBER },
-              },
-              children: [
-                new TextRun({
-                  text: beat.content,
-                  italics: true,
-                  size: 22,
-                  color: NARRATION_AMBER,
-                  font: 'Calibri',
-                }),
-              ],
-            })
-          )
-          break
-
+          h += `<div class="nar">${esc(b.content)}</div>`; break
         case 'tool_demo':
-          sections.push(
-            new Paragraph({
-              spacing: { before: 120, after: 120 },
-              alignment: AlignmentType.CENTER,
-              shading: { type: ShadingType.SOLID, color: '1A1A2E' },
-              children: [
-                new TextRun({
-                  text: `SCREEN RECORDING: ${beat.tool_name}`,
-                  bold: true,
-                  size: 20,
-                  color: INTERVIEW_BLUE,
-                  font: 'Consolas',
-                }),
-              ],
-            })
-          )
-          if (beat.description) {
-            sections.push(
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 80 },
-                children: [
-                  new TextRun({ text: beat.description, italics: true, size: 20, color: MUTED, font: 'Calibri' }),
-                ],
-              })
-            )
-          }
-          break
-
+          h += `<div class="demo"><div class="t">SCREEN RECORDING: ${esc(b.tool_name)}</div>`
+          if (b.description) h += `<div class="d">${esc(b.description)}</div>`
+          h += `</div>`; break
         default:
-          sections.push(body(beat.content, { color: MUTED }))
+          h += `<p style="color:${MUTED}">${esc(b.content)}</p>`
       }
-    })
-
-    sections.push(divider())
-  })
+    }
+    h += `<div class="hr"></div>`
+  }
 
   // Music Suggestions
   if (script.music_suggestions) {
     const ms = script.music_suggestions
-    sections.push(label('Music & Soundtrack'))
-    if (ms.overall_vision) sections.push(body(ms.overall_vision))
-    if (ms.soundtrack_style) sections.push(body(`Style: ${ms.soundtrack_style}`, { color: MUTED }))
-
+    h += `<p class="lbl">MUSIC &amp; SOUNDTRACK</p>`
+    if (ms.overall_vision) {
+      h += `<div class="box"><div class="t">Soundtrack Vision</div><p>${esc(ms.overall_vision)}</p>`
+      if (ms.soundtrack_style) h += `<p style="color:${MUTED}">Style: ${esc(ms.soundtrack_style)}</p>`
+      h += `</div>`
+    }
     if (ms.key_moments?.length > 0) {
-      sections.push(spacer())
-      sections.push(heading('Key Musical Moments', HeadingLevel.HEADING_3))
-      ms.key_moments.forEach((m) => {
-        sections.push(
-          new Paragraph({
-            spacing: { after: 60 },
-            children: [
-              new TextRun({ text: m.moment, bold: true, size: 20, color: CREAM, font: 'Calibri' }),
-              new TextRun({ text: `  —  ${m.music}`, size: 20, color: MUTED, font: 'Calibri' }),
-            ],
-          })
-        )
-      })
+      h += `<h3>Key Musical Moments</h3>`
+      for (const m of ms.key_moments) h += `<p><b>${esc(m.moment)}</b> <span style="color:${MUTED}">&mdash; ${esc(m.music)}</span></p>`
     }
-
-    if (ms.recommended_genres?.length > 0) {
-      sections.push(spacer())
-      sections.push(body(`Genres: ${ms.recommended_genres.join(', ')}`, { color: MONTAGE_PINK }))
-    }
+    if (ms.recommended_genres?.length > 0) h += `<p style="color:${MONTAGE_PINK}">Genres: ${esc(ms.recommended_genres.join(', '))}</p>`
     if (ms.reference_tracks?.length > 0) {
-      sections.push(spacer())
-      sections.push(heading('Reference Tracks', HeadingLevel.HEADING_3))
-      ms.reference_tracks.forEach((t) => bullet(t, { color: MUTED }))
+      h += `<h3>Reference Tracks</h3>`
+      for (const t of ms.reference_tracks) h += `<p class="bul" style="color:${MUTED}">&bull; ${esc(t)}</p>`
     }
-    sections.push(divider())
+    h += `<div class="hr"></div>`
   }
 
   // Production Notes
   if (script.production_notes) {
     const pn = script.production_notes
-    sections.push(label('Production Notes'))
-    if (pn.editors_note) sections.push(body(pn.editors_note, { italic: true }))
-    if (pn.music_direction) {
-      sections.push(spacer())
-      sections.push(body(`Music Direction: ${pn.music_direction}`, { color: MUTED }))
-    }
-    if (pn.visual_style) {
-      sections.push(body(`Visual Style: ${pn.visual_style}`, { color: MUTED }))
-    }
+    h += `<p class="lbl">PRODUCTION NOTES</p>`
+    if (pn.editors_note) h += `<div class="box"><div class="t">Editor's Note</div><p style="font-style:italic">${esc(pn.editors_note)}</p></div>`
+    if (pn.music_direction) h += `<p style="color:${MUTED}"><b>Music Direction:</b> ${esc(pn.music_direction)}</p>`
+    if (pn.visual_style) h += `<p style="color:${MUTED}"><b>Visual Style:</b> ${esc(pn.visual_style)}</p>`
     if (pn.missing_footage?.length > 0) {
-      sections.push(spacer())
-      sections.push(heading('Missing Footage', HeadingLevel.HEADING_3))
-      pn.missing_footage.forEach((m) => bullet(m, { color: 'FF6666' }))
+      h += `<div class="wbox"><div class="t">Missing Footage</div>`
+      for (const m of pn.missing_footage) h += `<p class="bul" style="color:#FF6666">&bull; ${esc(m)}</p>`
+      h += `</div>`
     }
     if (pn.additional_interviews_needed?.length > 0) {
-      sections.push(spacer())
-      sections.push(heading('Additional Interviews Needed', HeadingLevel.HEADING_3))
-      pn.additional_interviews_needed.forEach((m) => bullet(m))
+      h += `<h3>Additional Interviews Needed</h3>`
+      for (const m of pn.additional_interviews_needed) h += `<p class="bul">&bull; ${esc(m)}</p>`
     }
   }
 
-  const doc = new Document({
-    background: { color: DARK },
-    styles: {
-      default: {
-        document: {
-          run: { color: CREAM, font: 'Calibri', size: 22 },
-        },
-      },
-    },
-    sections: [{ children: sections }],
-  })
-
-  const blob = await Packer.toBlob(doc)
-  const filename = `${(script.title || 'script').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_script.docx`
-  saveAs(blob, filename)
+  saveAsDoc(h, `${safeName(script.title)}_script.doc`)
 }
 
-// ─── EDITOR CUT TO DOCX ───
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// EDITOR CUT EXPORT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export async function downloadEditorCutAsDocx(ec) {
-  const sections = []
+export function downloadEditorCutAsDocx(ec) {
+  let h = ''
 
   // Title
-  sections.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 400, after: 60 },
-      children: [
-        new TextRun({
-          text: "EDITOR'S CUT",
-          bold: true,
-          size: 18,
-          color: GOLD,
-          font: 'Consolas',
-          characterSpacing: 120,
-        }),
-      ],
-    })
-  )
-  sections.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 80 },
-      children: [
-        new TextRun({
-          text: ec.editor_cut_title || 'Untitled',
-          bold: true,
-          size: 48,
-          color: GOLD,
-          font: 'Georgia',
-        }),
-      ],
-    })
-  )
-  sections.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 60 },
-      children: [
-        new TextRun({ text: `${ec.version || 'v1'}  |  Runtime: ${ec.total_runtime_estimate || ''}`, size: 20, color: MUTED, font: 'Consolas' }),
-      ],
-    })
-  )
-  sections.push(divider())
+  h += `<p style="text-align:center" class="lbl">EDITOR'S CUT</p>`
+  h += `<h1 style="text-align:center">${esc(ec.editor_cut_title)}</h1>`
+  h += `<p style="text-align:center" class="meta">${esc(ec.version || 'v1')} &nbsp;|&nbsp; Runtime: ${esc(ec.total_runtime_estimate)}</p>`
+  h += `<div class="hr"></div>`
 
   // Editor Letter
   if (ec.editor_letter) {
-    sections.push(label('Letter to the Editor'))
-    sections.push(body(ec.editor_letter, { italic: true }))
-    sections.push(divider())
+    h += `<div class="box"><div class="t">Letter to the Editor</div><p style="font-style:italic">${esc(ec.editor_letter)}</p></div>`
+    h += `<div class="hr"></div>`
   }
 
   // Sequences
-  ec.sequences?.forEach((seq) => {
-    sections.push(
-      new Paragraph({
-        spacing: { before: 300, after: 40 },
-        children: [
-          tagPill(`SEQ ${seq.sequence_number}`, GOLD),
-          new TextRun({
-            text: seq.sequence_title,
-            bold: true,
-            size: 32,
-            color: CREAM,
-            font: 'Georgia',
-          }),
-          new TextRun({ text: `   ~${seq.duration_estimate}`, size: 18, color: MUTED, font: 'Consolas' }),
-        ],
-      })
-    )
-    if (seq.purpose) sections.push(body(seq.purpose, { color: MUTED }))
+  for (const seq of ec.sequences || []) {
+    h += `<h2><span style="color:${GOLD};font-family:Consolas;font-size:10pt">SEQ ${seq.sequence_number}</span> &nbsp; ${esc(seq.sequence_title)} <span class="meta">~${esc(seq.duration_estimate)}</span></h2>`
+    if (seq.purpose) h += `<p style="color:${MUTED}">${esc(seq.purpose)}</p>`
 
     // Music cue
     if (seq.music_cue) {
       const mc = seq.music_cue
       const desc = mc.track_description || (typeof mc === 'string' ? mc : '')
-      if (desc) {
-        sections.push(
-          new Paragraph({
-            spacing: { before: 80, after: 40 },
-            children: [
-              tagPill('MUSIC', MONTAGE_PINK),
-              new TextRun({ text: desc, size: 20, color: MONTAGE_PINK, font: 'Calibri' }),
-            ],
-          })
-        )
-      }
-      if (mc.dynamics) sections.push(body(mc.dynamics, { italic: true, color: MUTED }))
+      if (desc) h += `<p><span class="pill" style="color:${MONTAGE_PINK}">[MUSIC]</span> <span style="color:${MONTAGE_PINK}">${esc(desc)}</span></p>`
+      if (mc.dynamics) h += `<p style="color:${MUTED};font-style:italic;font-size:9pt">${esc(mc.dynamics)}</p>`
     }
 
-    sections.push(spacer())
-
     // Cuts
-    seq.cuts?.forEach((cut) => {
-      const typeColor = CUT_TYPE_COLORS[cut.type] || MUTED
+    for (const cut of seq.cuts || []) {
+      const col = CUT_TYPE_COLORS[cut.type] || MUTED
+      h += `<div class="cut" style="border-left-color:${col}">`
 
-      // Cut header line
-      const headerRuns = [
-        tagPill(cut.cut_number, MUTED),
-        new TextRun({
-          text: (cut.type || '').replace('_', ' ').toUpperCase(),
-          bold: true,
-          size: 18,
-          color: typeColor,
-          font: 'Consolas',
-        }),
-      ]
-      if (cut.source) {
-        headerRuns.push(new TextRun({ text: `   ← ${cut.source}`, size: 18, color: MUTED, font: 'Calibri' }))
-      }
-      if (cut.timecode_in && cut.timecode_out) {
-        headerRuns.push(new TextRun({ text: `   [${cut.timecode_in} → ${cut.timecode_out}]`, size: 18, color: GOLD, font: 'Consolas' }))
-      }
-      if (cut.duration) {
-        headerRuns.push(new TextRun({ text: `  (${cut.duration})`, size: 16, color: MUTED, font: 'Consolas' }))
-      }
-      sections.push(new Paragraph({ spacing: { before: 160, after: 40 }, children: headerRuns }))
+      // Header
+      h += `<p style="margin-bottom:2pt"><span class="meta">${esc(cut.cut_number)}</span> <span class="ct" style="color:${col}">${esc((cut.type || '').replace('_', ' '))}</span>`
+      if (cut.source) h += ` <span style="font-size:9pt;color:${MUTED}">&larr; ${esc(cut.source)}</span>`
+      if (cut.timecode_in && cut.timecode_out) h += ` <span class="tc">[${esc(cut.timecode_in)} &rarr; ${esc(cut.timecode_out)}]</span>`
+      if (cut.duration) h += ` <span class="meta">(${esc(cut.duration)})</span>`
+      h += `</p>`
 
-      // VIDEO
-      sections.push(
-        new Paragraph({
-          spacing: { after: 40 },
-          children: [
-            new TextRun({ text: 'VIDEO: ', bold: true, size: 18, color: MUTED, font: 'Consolas' }),
-            new TextRun({ text: cut.description, size: 20, color: CREAM, font: 'Calibri' }),
-          ],
-        })
-      )
-
-      // AUDIO
-      if (cut.audio) {
-        sections.push(
-          new Paragraph({
-            spacing: { after: 40 },
-            children: [
-              new TextRun({ text: 'AUDIO: ', bold: true, size: 18, color: MUTED, font: 'Consolas' }),
-              new TextRun({ text: cut.audio, size: 20, color: CREAM, font: 'Calibri' }),
-            ],
-          })
-        )
-      }
+      // VIDEO / AUDIO
+      h += `<p style="margin-bottom:2pt"><span style="font-family:Consolas;font-size:9pt;color:${MUTED};font-weight:bold">VIDEO: </span>${esc(cut.description)}</p>`
+      if (cut.audio) h += `<p style="margin-bottom:2pt"><span style="font-family:Consolas;font-size:9pt;color:${MUTED};font-weight:bold">AUDIO: </span>${esc(cut.audio)}</p>`
 
       // Text Overlay
-      const overlay = cut.text_overlay
-      const overlayText = typeof overlay === 'string' ? overlay : overlay?.text
-      if (overlayText) {
-        const overlayRuns = [
-          new TextRun({ text: 'TEXT OVERLAY: ', bold: true, size: 18, color: TITLECARD_PURPLE, font: 'Consolas' }),
-          new TextRun({ text: `"${overlayText}"`, bold: true, size: 22, color: TITLECARD_PURPLE, font: 'Calibri' }),
-        ]
-        if (typeof overlay === 'object') {
-          const meta = [overlay.type, overlay.position, overlay.style].filter(Boolean).join('  |  ')
-          if (meta) {
-            overlayRuns.push(new TextRun({ text: `   ${meta}`, size: 16, color: MUTED, font: 'Consolas' }))
-          }
+      const ov = cut.text_overlay
+      const ovText = typeof ov === 'string' ? ov : ov?.text
+      if (ovText) {
+        h += `<div class="olay"><span style="font-family:Consolas;font-size:8pt;color:${TITLECARD_PURPLE};font-weight:bold">TEXT OVERLAY</span>`
+        if (typeof ov === 'object' && ov.type) h += ` <span class="meta">${esc(ov.type.replace('_', ' '))}</span>`
+        h += `<div class="tx">&ldquo;${esc(ovText)}&rdquo;</div>`
+        if (typeof ov === 'object') {
+          const meta = [ov.position && `Position: ${ov.position}`, ov.style && `Style: ${ov.style}`, ov.timing && `Timing: ${ov.timing}`].filter(Boolean).join(' &nbsp;|&nbsp; ')
+          if (meta) h += `<p class="meta" style="font-size:8pt">${esc(meta)}</p>`
         }
-        sections.push(new Paragraph({ spacing: { before: 60, after: 40 }, children: overlayRuns }))
+        h += `</div>`
       }
 
       // Graphics
       if (cut.graphics?.needed) {
-        sections.push(
-          new Paragraph({
-            spacing: { before: 60, after: 40 },
-            children: [
-              new TextRun({ text: `GRAPHIC [${cut.graphics.type || 'graphic'}]: `, bold: true, size: 18, color: BROLL_GREEN, font: 'Consolas' }),
-              new TextRun({ text: cut.graphics.description, size: 20, color: CREAM, font: 'Calibri' }),
-            ],
-          })
-        )
+        h += `<div class="gfx"><span style="font-family:Consolas;font-size:8pt;color:${BROLL_GREEN};font-weight:bold">GRAPHIC</span>`
+        if (cut.graphics.type) h += ` <span class="meta">[${esc(cut.graphics.type.replace('_', ' '))}]</span>`
+        h += `<p>${esc(cut.graphics.description)}</p>`
+        if (cut.graphics.timing) h += `<p class="meta" style="font-size:8pt">Timing: ${esc(cut.graphics.timing)}</p>`
+        h += `</div>`
       }
 
       // Transitions
-      const transRuns = []
-      if (cut.transition_in) transRuns.push(new TextRun({ text: `IN: ${cut.transition_in}   `, size: 16, color: MUTED, font: 'Consolas' }))
-      if (cut.transition_out) transRuns.push(new TextRun({ text: `OUT: ${cut.transition_out}`, size: 16, color: MUTED, font: 'Consolas' }))
-      if (transRuns.length > 0) sections.push(new Paragraph({ spacing: { after: 40 }, children: transRuns }))
+      const tr = []
+      if (cut.transition_in) tr.push(`IN: ${cut.transition_in}`)
+      if (cut.transition_out) tr.push(`OUT: ${cut.transition_out}`)
+      if (tr.length) h += `<p class="meta" style="font-size:8pt">${esc(tr.join('  |  '))}</p>`
 
-      // Editing notes
-      if (cut.editing_notes) {
-        sections.push(
-          new Paragraph({
-            spacing: { after: 60 },
-            children: [
-              new TextRun({ text: 'EDIT: ', bold: true, size: 16, color: NARRATION_AMBER, font: 'Consolas' }),
-              new TextRun({ text: cut.editing_notes, italics: true, size: 18, color: NARRATION_AMBER, font: 'Calibri' }),
-            ],
-          })
-        )
-      }
-    })
+      // Edit notes
+      if (cut.editing_notes) h += `<p class="en">&#9986; ${esc(cut.editing_notes)}</p>`
 
-    // Pacing
-    if (seq.pacing_notes) sections.push(body(`Pacing: ${seq.pacing_notes}`, { color: MUTED }))
+      h += `</div>`
+    }
 
-    sections.push(divider())
-  })
+    if (seq.pacing_notes) h += `<p style="color:${MUTED};font-size:9pt"><b style="color:${GOLD}">Pacing:</b> ${esc(seq.pacing_notes)}</p>`
+    h += `<div class="hr"></div>`
+  }
 
   // Post-production
   if (ec.post_production) {
     const pp = ec.post_production
-    sections.push(label('Post-Production'))
+    h += `<p class="lbl">POST-PRODUCTION</p>`
 
     if (pp.color_grading) {
-      sections.push(heading('Color Grading', HeadingLevel.HEADING_3))
-      sections.push(body(pp.color_grading.overall_look || ''))
+      h += `<h3>Color Grading</h3>`
+      h += `<p>${esc(pp.color_grading.overall_look || '')}</p>`
       if (pp.color_grading.per_type_treatment) {
-        Object.entries(pp.color_grading.per_type_treatment).forEach(([type, treatment]) => {
-          sections.push(bullet(`${type.replace('_', ' ')}: ${treatment}`))
-        })
+        for (const [type, val] of Object.entries(pp.color_grading.per_type_treatment)) {
+          h += `<p class="bul" style="color:${MUTED}">&bull; <b>${esc(type.replace('_', ' '))}:</b> ${esc(val)}</p>`
+        }
       }
     }
 
     if (pp.sound_design) {
-      sections.push(heading('Sound Design', HeadingLevel.HEADING_3))
-      if (pp.sound_design.overall_mix) sections.push(body(pp.sound_design.overall_mix))
-      if (pp.sound_design.ambient_beds) sections.push(body(`Ambience: ${pp.sound_design.ambient_beds}`, { color: MUTED }))
-      pp.sound_design.sound_effects?.forEach((s) => bullet(s))
+      h += `<h3>Sound Design</h3>`
+      if (pp.sound_design.overall_mix) h += `<p>${esc(pp.sound_design.overall_mix)}</p>`
+      if (pp.sound_design.ambient_beds) h += `<p style="color:${MUTED}">Ambience: ${esc(pp.sound_design.ambient_beds)}</p>`
+      for (const s of pp.sound_design.sound_effects || []) h += `<p class="bul" style="color:${MUTED}">&bull; ${esc(s)}</p>`
     }
 
     if (pp.graphics_package?.length > 0) {
-      sections.push(heading('Graphics Package', HeadingLevel.HEADING_3))
-      pp.graphics_package.forEach((g) => {
-        sections.push(
-          new Paragraph({
-            spacing: { after: 60 },
-            children: [
-              tagPill(g.priority || 'tbd', g.priority === 'essential' ? GOLD : MUTED),
-              new TextRun({ text: `${g.item}: `, bold: true, size: 20, color: CREAM, font: 'Calibri' }),
-              new TextRun({ text: g.description, size: 20, color: MUTED, font: 'Calibri' }),
-            ],
-          })
-        )
-      })
+      h += `<h3>Graphics Package</h3>`
+      for (const g of pp.graphics_package) {
+        const pc = g.priority === 'essential' ? GOLD : MUTED
+        h += `<p><span class="pill" style="color:${pc}">[${esc(g.priority || 'tbd')}]</span> <b>${esc(g.item)}:</b> <span style="color:${MUTED}">${esc(g.description)}</span></p>`
+      }
     }
-
-    sections.push(divider())
+    h += `<div class="hr"></div>`
   }
 
   // Missing footage
   if (ec.missing_footage?.length > 0) {
-    sections.push(label('Missing Footage'))
-    ec.missing_footage.forEach((m) => {
-      sections.push(
-        new Paragraph({
-          spacing: { after: 60 },
-          children: [
-            tagPill(m.priority || 'tbd', m.priority === 'critical' ? 'FF6666' : MUTED),
-            new TextRun({ text: m.description, size: 20, color: CREAM, font: 'Calibri' }),
-          ],
-        })
-      )
-      if (m.suggestion) sections.push(body(m.suggestion, { italic: true, color: MUTED }))
-    })
-    sections.push(divider())
+    h += `<div class="wbox"><div class="t">Missing Footage</div>`
+    for (const m of ec.missing_footage) {
+      const pc = m.priority === 'critical' ? '#FF6666' : MUTED
+      h += `<p><span class="pill" style="color:${pc}">[${esc(m.priority || 'tbd')}]</span> ${esc(m.description)}</p>`
+      if (m.suggestion) h += `<p style="color:${MUTED};font-style:italic;margin-left:18pt;font-size:9pt">${esc(m.suggestion)}</p>`
+    }
+    h += `</div>`
   }
 
   // Delivery specs
   if (ec.delivery_specs) {
     const ds = ec.delivery_specs
-    sections.push(label('Delivery Specs'))
-    const specs = [ds.aspect_ratio, ds.resolution, ds.frame_rate, ds.audio_format].filter(Boolean).join('  |  ')
-    sections.push(body(specs, { color: MUTED }))
+    h += `<p class="lbl">DELIVERY SPECS</p>`
+    h += `<p class="meta">${esc([ds.aspect_ratio, ds.resolution, ds.frame_rate, ds.audio_format].filter(Boolean).join('  |  '))}</p>`
   }
 
-  const doc = new Document({
-    background: { color: DARK },
-    styles: {
-      default: {
-        document: {
-          run: { color: CREAM, font: 'Calibri', size: 22 },
-        },
-      },
-    },
-    sections: [{ children: sections }],
-  })
-
-  const blob = await Packer.toBlob(doc)
-  const filename = `${(ec.editor_cut_title || 'editor_cut').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.docx`
-  saveAs(blob, filename)
+  saveAsDoc(h, `${safeName(ec.editor_cut_title)}_editors_cut.doc`)
 }
