@@ -1,4 +1,4 @@
-# DocuForge — AI-Powered Documentary Production Tool
+# Tarantino — AI-Powered Documentary Production Tool
 
 ## What This Is
 An internal tool for **Codebasics** to streamline documentary filmmaking — from story development through final edit instructions. Built as a React (Vite) web app that uses the Anthropic API (Claude) as the AI backbone.
@@ -9,7 +9,7 @@ A documentary about **how Codebasics is navigating the AI wave with an internal 
 ## Architecture
 
 ```
-docuforge/
+tarantino/
 ├── src/
 │   ├── components/
 │   │   ├── PhaseNav.jsx              # Top navigation across 4 phases

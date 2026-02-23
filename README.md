@@ -1,4 +1,4 @@
-# 🎬 DocuForge
+# 🎬 Tarantino
 
 AI-powered documentary production tool for Codebasics. Acts as your assistant director from story development through final edit instructions.
 
@@ -7,7 +7,7 @@ AI-powered documentary production tool for Codebasics. Acts as your assistant di
 ```bash
 # 1. Clone and install
 git clone <your-repo-url>
-cd docuforge
+cd tarantino
 npm install
 
 # 2. Add your Anthropic API key

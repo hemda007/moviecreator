@@ -4,7 +4,7 @@ import TranscriptStudio from './components/TranscriptStudio'
 import ScriptViewer from './components/ScriptViewer'
 
 /**
- * DocuForge — Simplified Flow
+ * Tarantino — Simplified Flow
  *
  * Screen 1: TranscriptStudio
  *   - Drop transcript .txt files (or paste them)
@@ -62,7 +62,7 @@ export default function App() {
             <span className="text-xl">🎬</span>
             <div>
               <span className="text-base font-semibold tracking-tight">
-                DocuForge
+                Tarantino
               </span>
               <span className="ml-2 font-mono text-[10px] font-semibold tracking-widest text-forge-gold/60">
                 TRANSCRIPT STUDIO
