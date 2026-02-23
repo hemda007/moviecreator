@@ -201,7 +201,7 @@ export default function EditorCut({
   setEditorCut,
   onBackToScript,
 }) {
-  const { isLoading, error, generate } = useAIGeneration(buildEditorCutPrompt)
+  const { isLoading, error, generate } = useAIGeneration(buildEditorCutPrompt, { maxTokens: 16000 })
 
   useEffect(() => {
     if (!editorCut && !isLoading) {

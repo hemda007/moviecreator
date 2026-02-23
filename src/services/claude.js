@@ -7,7 +7,7 @@ const MODEL = 'claude-sonnet-4-20250514'
  * @param {number} maxTokens - Max tokens for response
  * @returns {object} Parsed JSON response
  */
-export async function generateWithClaude(prompt, maxTokens = 8000) {
+export async function generateWithClaude(prompt, maxTokens = 16000) {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
 
   if (!apiKey) {
@@ -38,6 +38,9 @@ export async function generateWithClaude(prompt, maxTokens = 8000) {
   }
 
   const data = await response.json()
+
+  // Check if the response was truncated due to max_tokens
+  const stopReason = data.stop_reason
   const text = data.content
     .map((block) => (block.type === 'text' ? block.text : ''))
     .filter(Boolean)
@@ -48,6 +51,9 @@ export async function generateWithClaude(prompt, maxTokens = 8000) {
   if (parsed !== null) return parsed
 
   console.error('Failed to parse AI response:', text.substring(0, 500))
+  if (stopReason === 'max_tokens') {
+    throw new Error('AI response was cut off (too long). Retrying usually fixes this.')
+  }
   throw new Error('AI returned invalid JSON. Please retry.')
 }
 
@@ -78,9 +84,60 @@ function extractJSON(text) {
     try {
       return JSON.parse(stripped.substring(firstBrace, lastBrace + 1))
     } catch {
+      // continue to next strategy
+    }
+  }
+
+  // 4. Try to repair truncated JSON by closing open brackets/braces
+  if (firstBrace !== -1) {
+    try {
+      return repairTruncatedJSON(stripped.substring(firstBrace))
+    } catch {
       // all strategies exhausted
     }
   }
 
   return null
+}
+
+/**
+ * Attempt to repair truncated JSON by closing unclosed brackets and braces.
+ * This handles cases where the AI hit max_tokens mid-response.
+ */
+function repairTruncatedJSON(text) {
+  // Remove any trailing incomplete string value (after last complete key-value)
+  let repaired = text.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"{}[\]]*$/, '')
+
+  // Count open/close brackets
+  const opens = []
+  let inString = false
+  let escaped = false
+
+  for (const ch of repaired) {
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      escaped = true
+      continue
+    }
+    if (ch === '"') {
+      inString = !inString
+      continue
+    }
+    if (inString) continue
+
+    if (ch === '{' || ch === '[') opens.push(ch)
+    else if (ch === '}' && opens.length && opens[opens.length - 1] === '{') opens.pop()
+    else if (ch === ']' && opens.length && opens[opens.length - 1] === '[') opens.pop()
+  }
+
+  // Close any remaining open brackets in reverse order
+  while (opens.length) {
+    const open = opens.pop()
+    repaired += open === '{' ? '}' : ']'
+  }
+
+  return JSON.parse(repaired)
 }

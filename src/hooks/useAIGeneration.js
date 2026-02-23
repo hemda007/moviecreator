@@ -4,9 +4,10 @@ import { generateWithClaude } from '../services/claude'
 /**
  * Shared hook for AI generation with loading, error, and retry.
  * @param {Function} buildPrompt - Function that returns the prompt string
+ * @param {object} options - { maxTokens }
  * @returns {{ data, isLoading, error, generate, reset }}
  */
-export function useAIGeneration(buildPrompt) {
+export function useAIGeneration(buildPrompt, { maxTokens } = {}) {
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -17,7 +18,7 @@ export function useAIGeneration(buildPrompt) {
       setError(null)
       try {
         const prompt = buildPrompt(...args)
-        const result = await generateWithClaude(prompt)
+        const result = await generateWithClaude(prompt, maxTokens)
         setData(result)
         return result
       } catch (err) {
@@ -28,7 +29,7 @@ export function useAIGeneration(buildPrompt) {
         setIsLoading(false)
       }
     },
-    [buildPrompt]
+    [buildPrompt, maxTokens]
   )
 
   const reset = useCallback(() => {
