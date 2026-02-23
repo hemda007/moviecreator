@@ -58,6 +58,8 @@ YOUR TASK:
 
 5. END WITH IMPACT. The closing should land emotionally.
 
+6. MUSIC SUGGESTIONS. For each chapter, suggest specific music direction — mood, tempo, instruments, and reference tracks or genres. Also provide an overall soundtrack vision for the documentary.
+
 Respond ONLY with valid JSON in this exact format (no markdown, no backticks, no preamble):
 {
   "title": "Documentary title",
@@ -78,6 +80,12 @@ Respond ONLY with valid JSON in this exact format (no markdown, no backticks, no
       "chapter_title": "Cold Open",
       "purpose": "Why this chapter exists in the story",
       "duration_estimate": "e.g., 1:30",
+      "music_suggestion": {
+        "mood": "e.g., Tense, anticipatory",
+        "tempo": "e.g., Slow build, 80 BPM",
+        "instruments": "e.g., Minimal piano, soft synth pads",
+        "reference": "e.g., Similar to Hans Zimmer's Interstellar — quiet tension"
+      },
       "beats": [
         {
           "type": "scene_heading",
@@ -104,6 +112,18 @@ Respond ONLY with valid JSON in this exact format (no markdown, no backticks, no
       ]
     }
   ],
+  "music_suggestions": {
+    "overall_vision": "The sonic identity of this documentary — what should it feel like?",
+    "soundtrack_style": "e.g., Ambient electronic with organic textures",
+    "key_moments": [
+      {
+        "moment": "Description of the scene/beat",
+        "music": "What music should do here — swell, drop, silence, etc."
+      }
+    ],
+    "recommended_genres": ["e.g., Ambient", "Post-rock", "Cinematic electronic"],
+    "reference_tracks": ["Artist - Track Name (for mood reference, not for actual use)"]
+  },
   "production_notes": {
     "missing_footage": ["Things you'd want to capture that aren't in the transcripts"],
     "music_direction": "Overall music/sound guidance",

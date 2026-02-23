@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import TranscriptStudio from './components/TranscriptStudio'
 import ScriptViewer from './components/ScriptViewer'
+import EditorCut from './components/EditorCut'
 
 /**
- * Tarantino — Simplified Flow
+ * Tarantino — 3-Phase Flow
  *
  * Screen 1: TranscriptStudio
  *   - Drop transcript .txt files (or paste them)
@@ -13,8 +14,14 @@ import ScriptViewer from './components/ScriptViewer'
  *
  * Screen 2: ScriptViewer
  *   - AI reads all transcripts, finds the story, crafts the screenplay
- *   - Renders it beautifully with chapters, dialogue, narration, tool demos
- *   - "Back to Studio" to tweak and regenerate
+ *   - Renders it with chapters, dialogue, narration, music suggestions
+ *   - Download as .md or .json
+ *   - "Generate Editor's Cut" to proceed
+ *
+ * Screen 3: EditorCut
+ *   - AI generates cut-by-cut editing instructions with timecodes
+ *   - Text overlays, graphics, transitions, music cues
+ *   - Download the editor-ready document
  */
 export default function App() {
   const [transcripts, setTranscripts] = useLocalStorage('transcripts', [])
@@ -26,16 +33,30 @@ export default function App() {
     additionalNotes: '',
   })
   const [script, setScript] = useLocalStorage('generatedScript', null)
-  const [view, setView] = useState(script ? 'script' : 'studio')
+  const [editorCut, setEditorCut] = useLocalStorage('editorCut', null)
+  const [view, setView] = useState(
+    editorCut ? 'editor' : script ? 'script' : 'studio'
+  )
 
   const handleGenerate = () => {
-    setScript(null) // clear old script so ScriptViewer auto-generates
+    setScript(null)
+    setEditorCut(null)
     setView('script')
   }
 
   const handleBackToStudio = () => {
     setScript(null)
+    setEditorCut(null)
     setView('studio')
+  }
+
+  const handleGenerateEditorCut = () => {
+    setEditorCut(null)
+    setView('editor')
+  }
+
+  const handleBackToScript = () => {
+    setView('script')
   }
 
   const resetProject = () => {
@@ -49,9 +70,16 @@ export default function App() {
         additionalNotes: '',
       })
       setScript(null)
+      setEditorCut(null)
       setView('studio')
     }
   }
+
+  const viewLabels = [
+    { key: 'studio', label: '01 Transcripts & Brief' },
+    { key: 'script', label: '02 Documentary Script' },
+    { key: 'editor', label: '03 Editor\'s Cut' },
+  ]
 
   return (
     <div className="min-h-screen bg-forge-black text-forge-cream font-body">
@@ -65,7 +93,11 @@ export default function App() {
                 Tarantino
               </span>
               <span className="ml-2 font-mono text-[10px] font-semibold tracking-widest text-forge-gold/60">
-                TRANSCRIPT STUDIO
+                {view === 'studio'
+                  ? 'TRANSCRIPT STUDIO'
+                  : view === 'script'
+                    ? 'SCRIPT VIEWER'
+                    : "EDITOR'S CUT"}
               </span>
             </div>
           </div>
@@ -79,25 +111,27 @@ export default function App() {
                 ← Studio
               </button>
             )}
+            {view === 'editor' && (
+              <button
+                onClick={handleBackToScript}
+                className="rounded-lg border border-white/10 px-4 py-2 text-[13px] text-white/40 transition hover:border-white/20 hover:text-white/60"
+              >
+                ← Script
+              </button>
+            )}
             <div className="flex gap-0.5 rounded-xl bg-black/30 p-1.5">
-              <span
-                className={`rounded-lg px-4 py-2 text-[13px] font-medium transition-all ${
-                  view === 'studio'
-                    ? 'bg-gradient-to-br from-forge-gold to-forge-gold-dark text-forge-black'
-                    : 'text-white/30'
-                }`}
-              >
-                01 Transcripts & Brief
-              </span>
-              <span
-                className={`rounded-lg px-4 py-2 text-[13px] font-medium transition-all ${
-                  view === 'script'
-                    ? 'bg-gradient-to-br from-forge-gold to-forge-gold-dark text-forge-black'
-                    : 'text-white/30'
-                }`}
-              >
-                02 Documentary Script
-              </span>
+              {viewLabels.map((v) => (
+                <span
+                  key={v.key}
+                  className={`rounded-lg px-4 py-2 text-[13px] font-medium transition-all ${
+                    view === v.key
+                      ? 'bg-gradient-to-br from-forge-gold to-forge-gold-dark text-forge-black'
+                      : 'text-white/30'
+                  }`}
+                >
+                  {v.label}
+                </span>
+              ))}
             </div>
             <button
               onClick={resetProject}
@@ -131,6 +165,18 @@ export default function App() {
               setScript(s)
               if (!s) setView('studio')
             }}
+            onGenerateEditorCut={handleGenerateEditorCut}
+          />
+        )}
+
+        {view === 'editor' && script && (
+          <EditorCut
+            script={script}
+            transcripts={transcripts}
+            storyBrief={storyBrief}
+            editorCut={editorCut}
+            setEditorCut={setEditorCut}
+            onBackToScript={handleBackToScript}
           />
         )}
       </main>
