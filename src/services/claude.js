@@ -27,6 +27,7 @@ export async function generateWithClaude(prompt, maxTokens = 8000) {
     body: JSON.stringify({
       model: MODEL,
       max_tokens: maxTokens,
+      system: 'Respond with valid JSON only. No markdown, no code fences, no commentary before or after the JSON.',
       messages: [{ role: 'user', content: prompt }],
     }),
   })
@@ -42,13 +43,44 @@ export async function generateWithClaude(prompt, maxTokens = 8000) {
     .filter(Boolean)
     .join('\n')
 
-  // Strip markdown fences and parse JSON
-  const clean = text.replace(/```json\s*|```\s*/g, '').trim()
+  // Extract and parse JSON from AI response
+  const parsed = extractJSON(text)
+  if (parsed !== null) return parsed
 
+  console.error('Failed to parse AI response:', text.substring(0, 500))
+  throw new Error('AI returned invalid JSON. Please retry.')
+}
+
+/**
+ * Attempt to extract a JSON object from a string that may contain
+ * markdown fences, preamble text, or trailing commentary.
+ */
+function extractJSON(text) {
+  // 1. Try parsing the raw text directly
   try {
-    return JSON.parse(clean)
-  } catch (parseErr) {
-    console.error('Failed to parse AI response:', clean.substring(0, 500))
-    throw new Error('AI returned invalid JSON. Please retry.')
+    return JSON.parse(text)
+  } catch {
+    // continue to next strategy
   }
+
+  // 2. Strip markdown code fences and try again
+  const stripped = text.replace(/```(?:json)?\s*|```\s*/g, '').trim()
+  try {
+    return JSON.parse(stripped)
+  } catch {
+    // continue to next strategy
+  }
+
+  // 3. Find the outermost { ... } and try to parse that
+  const firstBrace = stripped.indexOf('{')
+  const lastBrace = stripped.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(stripped.substring(firstBrace, lastBrace + 1))
+    } catch {
+      // all strategies exhausted
+    }
+  }
+
+  return null
 }
